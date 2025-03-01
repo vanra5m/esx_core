@@ -3,12 +3,12 @@ local alreadyRegistered = {}
 local multichar = ESX.GetConfig().Multichar
 
 local function deleteIdentityFromDatabase(xPlayer)
-    MySQL.query.await("UPDATE users SET firstname = ?, lastname = ?, dateofbirth = ?, sex = ?, height = ?, skin = ? WHERE identifier = ?", { nil, nil, nil, nil, nil, nil, xPlayer.identifier })
+    MySQL.query("UPDATE users SET firstname = ?, lastname = ?, dateofbirth = ?, sex = ?, height = ?, skin = ? WHERE identifier = ?", { nil, nil, nil, nil, nil, nil, xPlayer.identifier })
 
     if Config.FullCharDelete then
-        MySQL.update.await("UPDATE addon_account_data SET money = 0 WHERE account_name IN (?) AND owner = ?", { { "bank_savings", "caution" }, xPlayer.identifier })
+        MySQL.update("UPDATE addon_account_data SET money = 0 WHERE account_name IN (?) AND owner = ?", { { "bank_savings", "caution" }, xPlayer.identifier })
 
-        MySQL.prepare.await("UPDATE datastore_data SET data = ? WHERE name IN (?) AND owner = ?", { "'{}'", { "user_ears", "user_glasses", "user_helmet", "user_mask" }, xPlayer.identifier })
+        MySQL.prepare("UPDATE datastore_data SET data = ? WHERE name IN (?) AND owner = ?", { "'{}'", { "user_ears", "user_glasses", "user_helmet", "user_mask" }, xPlayer.identifier })
     end
 end
 
@@ -73,57 +73,37 @@ end
 
 local function formatDate(str)
     local d, m, y = string.match(str, "(%d+)/(%d+)/(%d+)")
-    local date = str
 
     if Config.DateFormat == "MM/DD/YYYY" then
-        date = m .. "/" .. d .. "/" .. y
+        return string.format("%s/%s/%s", m, d, y)
     elseif Config.DateFormat == "YYYY/MM/DD" then
-        date = y .. "/" .. m .. "/" .. d
+        return string.format("%s/%s/%s", y, m, d)
     end
 
-    return date
-end
-
-local function checkAlphanumeric(str)
-    return (string.match(str, "%W"))
-end
-
-local function checkForNumbers(str)
-    return (string.match(str, "%d"))
+    return str
 end
 
 local function checkNameFormat(name)
-    if not checkAlphanumeric(name) and not checkForNumbers(name) then
-        local stringLength = string.len(name)
-        return stringLength > 0 and stringLength < Config.MaxNameLength
+    if string.match(name, "%W") or string.match(name, "%d") then
+        return false
     end
 
-    return false
+    local stringLength = #name
+    return stringLength > 0 and stringLength < Config.MaxNameLength
 end
 
 local function checkSexFormat(sex)
-    if not sex then
-        return false
-    end
-    return sex == "m" or sex == "M" or sex == "f" or sex == "F"
+    sex = sex and string.lower(sex)
+    return sex == "m" or sex == "f"
 end
 
 local function checkHeightFormat(height)
-    local numHeight = tonumber(height) or 0
-    return numHeight >= Config.MinHeight and numHeight <= Config.MaxHeight
-end
-
-local function convertToLowerCase(str)
-    return string.lower(str)
-end
-
-local function convertFirstLetterToUpper(str)
-    return str:gsub("^%l", string.upper)
+    height = tonumber(height) or 0
+    return height >= Config.MinHeight and height <= Config.MaxHeight
 end
 
 local function formatName(name)
-    local loweredName = convertToLowerCase(name)
-    return convertFirstLetterToUpper(loweredName)
+    return name:lower():gsub('^%l', string.upper)
 end
 
 local function setIdentity(xPlayer)
